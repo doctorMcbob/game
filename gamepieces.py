@@ -79,10 +79,11 @@ class Player(GamePiece):
 				if event.key == self.buttons['dash'] and self.dash:
 					self.x_vel = self.dash_speed * self.direction
 					self.dash = False
-				if event.key == self.buttons['left']:
-					self.direction = -1
-				if event.key == self.buttons['right']:
-					self.direction = 1
+				if event.key in (self.buttons['left'], self.buttons['right']):
+					self.direction = [
+						self.buttons['left'], 'never', self.buttons['right']
+					].index(event.key) - 1
+					self.x_vel = min(abs(self.x_vel), self.walk_speed)  * self.direction
 
 		self.keys = pygame.key.get_pressed()
 		self.x_vel = max(
