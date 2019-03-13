@@ -8,23 +8,23 @@ pygame.init()
 FONT = pygame.font.SysFont("helvetica", 10)
 CLOCK = pygame.time.Clock()
 
-class GamePiece(object):
-	"Anything with the daunting task of appearing on screen"
+class GamePiece(pygame.rect.Rect):
+	"Anything with the daunting task of being in the game"
 	def __init__(self, *args, **kwargs):
 		"""let args be rect arguments"""
+		pygame.rect.Rect.__init__(self, *args)
 		self.name = kwargs["name"]
-		self.rect = pygame.Rect(*args)
-		self.x, self.y = self.rect.x, self.rect.y
-		self.w, self.h = self.rect.w, self.rect.h
 		self.color = kwargs["color"]
 
 	def draw(self, destination):
-		pygame.draw.rect(destination, self.color, self.rect)
+		#overwrite with animation 
+		pygame.draw.rect(destination, self.color, self)
 		destination.blit(FONT.render(self.name, 0, (0, 0, 0)),
-		(self.rect.x, self.rect.y))
+		(self.x, self.y))
 
 	def advance(self, game):
-		pass
+		pass #overwrite with cool functionality,
+		# or just leave for static platform
 
 
 class Player(GamePiece):
@@ -34,16 +34,16 @@ class Player(GamePiece):
 		self.y_vel = 0
 		self.direction = 1 #pos = right, neg = left
 
-		self.grav = 2
-		self.jump_vel = -30
-		self.jumps = 2
-		self.dash = True
-		self.dash_speed = 20
-		self.dash_frames = 5
+		self.grav = kwargs["grav"]
+		self.jump_vel = kwargs["jump_vel"]
+		self.jumps = kwargs["jumps"]
+		self.dash = kwargs["dash"]
+		self.dash_speed = kwargs["dash_speed"]
+		self.dash_frames = kwargs["dash_frames"]
 		self.dash_counter = 0
-		self.walk_speed = 8
-		self.speed = 1
-		self.friction = 3
+		self.walk_speed = kwargs["walk_speed"]
+		self.speed = kwargs["speed"]
+		self.friction = kwargs["friction"]
 
 		self.keys = pygame.key.get_pressed()
 		self.buttons = {
@@ -61,6 +61,7 @@ class Player(GamePiece):
 		print("x_vel, y_vel: ", self.x_vel, self.y_vel)
 		print("direction: ", self.direction)
 		print("jumps: ", self.jumps)
+		print("hasdash: ", self.dash)
 		print("dash counter, dash frames: ", self.dash_counter, self.dash_frames)
 		print("Buttons:")
 		for btn in self.buttons:
@@ -79,13 +80,9 @@ class Player(GamePiece):
 				if event.key == self.buttons['dash'] and self.dash:
 					self.x_vel = self.dash_speed * self.direction
 					self.dash = False
-				if event.key in (self.buttons['left'], self.buttons['right']):
-					self.direction = [
-						self.buttons['left'], 'never', self.buttons['right']
-					].index(event.key) - 1
-					self.x_vel = min(abs(self.x_vel), self.walk_speed)  * self.direction
-
 		self.keys = pygame.key.get_pressed()
+		if self.dash_counter == 0 and self.keys[self.buttons['left']] != self.keys[self.buttons['right']]:
+				self.direction = -1 if self.keys[self.buttons['left']] else 1
 		self.x_vel = max(
 			min(abs(self.x_vel) + (self.speed * (self.keys[self.buttons['right']] or self.keys[self.buttons['left']])), self.walk_speed),
 			abs(self.x_vel)
@@ -99,13 +96,19 @@ class Player(GamePiece):
 		# Y update and hit detection
 		self.y_vel += self.grav	
 
-		if self.rect.move(0, self.y_vel).collidelist(
-			[x.rect for x in platforms]) != -1:
+		i = self.move(0, self.y_vel).collidelist([plat for plat in platforms])
+		if i != -1:
 			#landing
+			if self.dash_counter == 0: self.dash = True
+
 			if self.y_vel > 0: 
 				self.jumps = 2
-			self.y_vel = 0
-
+				# velocity correction
+				while self.y_vel and platforms[i].colliderect(pygame.rect.Rect(
+					(self.left, self.bottom), (self.w, self.y_vel) )  ):
+					self.y_vel -= 1
+					if DEBUG: print("y velocity correction", self.y_vel)
+			else: self.y_vel = 0
 			if abs(self.x_vel) and self.dash:
 				if (self.keys[self.buttons['right']] or self.keys[self.buttons['left']]):
 					self.x_vel = max(abs(self.x_vel) - self.friction, self.walk_speed
@@ -115,24 +118,33 @@ class Player(GamePiece):
 						) * self.direction
 
 		# X update and hit detection
-		if not self.dash:
-			self.dash_counter += 1
+		if self.dash_counter:
 			if self.dash_counter == self.dash_frames:
-				self.dash = True
 				self.dash_counter = 0
-		if self.rect.move(self.x_vel, 0).collidelist(
-			[x.rect for x in platforms]) != -1:
-			self.x_vel = 0
+
+		i = self.move(self.x_vel, 0).collidelist([plat for plat in platforms])
+		if i != -1:
+			while platforms[i].colliderect(pygame.rect.Rect(
+						*[
+							((self.left + self.x_vel, self.top), (abs(self.x_vel), self.h)), "sneaky",
+							((self.right, self.top), (abs(self.x_vel), self.h)) 
+						][self.direction + 1])  ):
+					self.x_vel -= self.direction
+					if DEBUG: print("x velocity correction", self.x_vel)
 
 		#cornerbug fix
-		if self.rect.move(self.x_vel, self.y_vel).collidelist(
-			[x.rect for x in platforms]) != -1:
+		if self.move(self.x_vel, self.y_vel).collidelist(
+			[plat for plat in platforms]) != -1:
 			self.x_vel, self.y_vel = 0, 0
 
-		self.x += self.x_vel
-		self.y += self.y_vel
-		self.rect = pygame.Rect(self.x, self.y, self.w, self.h)
+		self.move_ip(self.x_vel, self.y_vel)
 		
+
+#class Trigger(GamePiece):
+#	def __init__(self, *args, **kwargs)
+
+
+
 
 def advance_frame(gameboard, CLOCK, SCREEN):
 	CLOCK.tick(30)
@@ -145,7 +157,19 @@ if __name__ == "__main__":
 	# TEST ROOM :)
 
 	SCREEN = pygame.display.set_mode((640, 480))
-
+	PLAYER = {
+		"name": "player",
+		"color": (100, 50, 100),
+		"grav": 4,
+		"jump_vel": -30,
+		"jumps": 2,
+		"dash": True,
+		"dash_speed": 20,
+		"dash_frames": 15,
+		"walk_speed": 8,
+		"speed": 1,
+		"friction": 3,
+	}
 	gameboard = []
 	gameboard.append(GamePiece(0, 460, 640, 20, 
 		name="platform", color=(150, 150, 100)))
@@ -156,8 +180,7 @@ if __name__ == "__main__":
 	gameboard.append(GamePiece(200, 300, 100, 20, 
 		name="platform", color=(150, 150, 100)))
 
-	player = Player(50, 50, 30, 40, 
-		name="player", color=(100, 50, 100))
+	player = Player(50, 50, 30, 40, **PLAYER)
 	gameboard.append(player)
 
 	while True:
