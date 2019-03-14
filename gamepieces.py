@@ -1,3 +1,12 @@
+# __TO DO LIST_____
+# x change game board from list of objects to dictionary
+# x triggers
+# . create enemies (walking triggers)
+# . create collectables
+# . implement buzz meter
+# . decide on final specs (game screen size, player size, final controls)
+# done with gamepeices.py
+
 from __future__ import unicode_literals, print_function
 import pygame
 from pygame.locals import *
@@ -15,6 +24,11 @@ class GamePiece(pygame.rect.Rect):
 		pygame.rect.Rect.__init__(self, *args)
 		self.name = kwargs["name"]
 		self.color = kwargs["color"]
+		self.tangible = kwargs["tangible"] #hit detection with player
+
+	def _debug(self):
+		if not DEBUG: return
+		print(self.__dict__)
 
 	def draw(self, destination):
 		#overwrite with animation 
@@ -23,6 +37,7 @@ class GamePiece(pygame.rect.Rect):
 		(self.x, self.y))
 
 	def advance(self, game):
+		if DEBUG: self._debug()
 		pass #overwrite with cool functionality,
 		# or just leave for static platform
 
@@ -53,20 +68,6 @@ class Player(GamePiece):
 			"dash": K_x
 		}
 
-	def _debug_display(self):
-		if not DEBUG: return
-		os.system('clear||cls')
-		print(self.name)
-		print("x, y:", self.x, self.y)
-		print("x_vel, y_vel: ", self.x_vel, self.y_vel)
-		print("direction: ", self.direction)
-		print("jumps: ", self.jumps)
-		print("hasdash: ", self.dash)
-		print("dash counter, dash frames: ", self.dash_counter, self.dash_frames)
-		print("Buttons:")
-		for btn in self.buttons:
-			print("   ", btn, ":", self.keys[self.buttons[btn]])
-
 	def _set_buttons(self, buttons):
 		self.buttons = buttons
 
@@ -90,9 +91,9 @@ class Player(GamePiece):
 
 
 	def advance(self, game):
-		self._debug_display()
+		if DEBUG: GamePiece._debug(self)
 		self.render_input()
-		platforms = filter(lambda x: x.name=="platform", game)
+		platforms = game["platforms"]
 		# Y update and hit detection
 		self.y_vel += self.grav	
 
@@ -140,18 +141,32 @@ class Player(GamePiece):
 		self.move_ip(self.x_vel, self.y_vel)
 		
 
-#class Trigger(GamePiece):
-#	def __init__(self, *args, **kwargs)
+class Trigger(GamePiece):
+	"""important note, in this engine, triggers look for hit detection with player 
+	while player looks for hit detection with tangibles"""
+	def __init__(self, *args, **kwargs):
+		GamePiece.__init__(self, *args, **kwargs)
+		self.function = kwargs['function']
+		self.triggered = False
 
+	def draw(self, destination):
+		if not DEBUG: return
+		GamePiece.draw(self, destination)
 
+	def advance(self, game):
+		if DEBUG: GamePiece._debug(self)
+		if not self.triggered and self.colliderect(game["player"]):
+			self.triggered = True
+			self.function(self, game)
+		#doesnt turn itself back on, function should do that
 
 
 def advance_frame(gameboard, CLOCK, SCREEN):
 	CLOCK.tick(30)
-	for peice in gameboard:
+	if DEBUG: os.system("clear||cls")
+	for peice in gameboard["platforms"] + [gameboard["player"]] + gameboard["triggers"]:
 		peice.advance(gameboard)
 		peice.draw(SCREEN)
-
 
 if __name__ == "__main__":
 	# TEST ROOM :)
@@ -160,8 +175,8 @@ if __name__ == "__main__":
 	PLAYER = {
 		"name": "player",
 		"color": (100, 50, 100),
-		"grav": 4,
-		"jump_vel": -30,
+		"grav": 1,
+		"jump_vel": -15,
 		"jumps": 2,
 		"dash": True,
 		"dash_speed": 20,
@@ -169,20 +184,29 @@ if __name__ == "__main__":
 		"walk_speed": 8,
 		"speed": 1,
 		"friction": 3,
+		"tangible": False
 	}
-	gameboard = []
-	gameboard.append(GamePiece(0, 460, 640, 20, 
-		name="platform", color=(150, 150, 100)))
-	gameboard.append(GamePiece(620, 0, 20, 460, 
-		name="platform", color=(150, 150, 100)))
-	gameboard.append(GamePiece(0, 0, 20, 460, 
-		name="platform", color=(150, 150, 100)))
-	gameboard.append(GamePiece(200, 300, 100, 20, 
-		name="platform", color=(150, 150, 100)))
+	wall = GamePiece(200, 320, 20, 140, name="door", tangible=True, color=(250, 150, 200))
+	def door(self, game, wall=wall):
+		if not hasattr(self, "wall"):
+			self.wall = wall
+		order = [(200, 320),(200, 180),(420, 180),(420, 320)]
+		self.x, self.y = wall.x, wall.y
+		wall.x, wall.y = order[(order.index((wall.x, wall.y)) + 1) % 4]
+		self.triggered = False
 
-	player = Player(50, 50, 30, 40, **PLAYER)
-	gameboard.append(player)
-
+	TRIGGER = {
+		"function": door,
+		"name": "doortrigger",
+		"tangible": False,
+		"color": (20, 150, 50)
+	}
+	gameboard = {
+		"player": Player(50, 50, 30, 40, **PLAYER),
+		"platforms": [wall] + [GamePiece(x, y, w, h, name="platform", tangible=True, color=(150, 150, 100))
+		for x, y, w, h in [(0, 460, 640, 20), (620, 0, 20, 460), (0, 0, 20, 460), (200, 300, 240, 20)]],
+		"triggers": [Trigger(420, 320, 20, 140, **TRIGGER)]
+	}
 	while True:
 		SCREEN.fill((255, 255, 255))
 		advance_frame(gameboard, CLOCK, SCREEN)
