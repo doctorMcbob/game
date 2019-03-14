@@ -1,10 +1,12 @@
 # __TO DO LIST_____
 # x change game board from list of objects to dictionary
 # x triggers
-# . create enemies (walking triggers)
-# . create collectables
+# x create enemies (walking triggers)
+# x create collectables
+# . rewrite player advance (include function abstraction in place of dash)
 # . implement buzz meter
 # . decide on final specs (game screen size, player size, final controls)
+# . animation in place of draw
 # done with gamepeices.py
 
 from __future__ import unicode_literals, print_function
@@ -22,9 +24,8 @@ class GamePiece(pygame.rect.Rect):
 	def __init__(self, *args, **kwargs):
 		"""let args be rect arguments"""
 		pygame.rect.Rect.__init__(self, *args)
-		self.name = kwargs["name"]
-		self.color = kwargs["color"]
-		self.tangible = kwargs["tangible"] #hit detection with player
+		for key in kwargs:
+			setattr(self, key, kwargs[key])
 
 	def _debug(self):
 		if not DEBUG: return
@@ -67,6 +68,7 @@ class Player(GamePiece):
 			"jump": K_z,
 			"dash": K_x
 		}
+		self.collectables = []
 
 	def _set_buttons(self, buttons):
 		self.buttons = buttons
@@ -94,14 +96,12 @@ class Player(GamePiece):
 		if DEBUG: GamePiece._debug(self)
 		self.render_input()
 		platforms = game["platforms"]
+		collectables = game["collectables"]
 		# Y update and hit detection
 		self.y_vel += self.grav	
 
 		i = self.move(0, self.y_vel).collidelist([plat for plat in platforms])
-		if i != -1:
-			#landing
-			if self.dash_counter == 0: self.dash = True
-
+		if i != -1:			
 			if self.y_vel > 0: 
 				self.jumps = 2
 				# velocity correction
@@ -138,7 +138,20 @@ class Player(GamePiece):
 			[plat for plat in platforms]) != -1:
 			self.x_vel, self.y_vel = 0, 0
 
+		if self.dash_counter == 0: self.dash = True
+		else: 
+			self.y_vel = 0
+			self.x_vel = self.dash_speed
+
+
 		self.move_ip(self.x_vel, self.y_vel)
+
+		i = self.collidelist(collectables)
+		if i != -1:
+			self.collectables.append(collectables[i].name)
+			game["collectables"].pop(i)
+
+
 		
 
 class Trigger(GamePiece):
@@ -146,7 +159,7 @@ class Trigger(GamePiece):
 	while player looks for hit detection with tangibles"""
 	def __init__(self, *args, **kwargs):
 		GamePiece.__init__(self, *args, **kwargs)
-		self.function = kwargs['function']
+		self.function = kwargs['trigger_function']
 		self.triggered = False
 
 	def draw(self, destination):
@@ -161,15 +174,38 @@ class Trigger(GamePiece):
 		#doesnt turn itself back on, function should do that
 
 
-def advance_frame(gameboard, CLOCK, SCREEN):
-	CLOCK.tick(30)
-	if DEBUG: os.system("clear||cls")
-	for peice in gameboard["platforms"] + [gameboard["player"]] + gameboard["triggers"]:
-		peice.advance(gameboard)
-		peice.draw(SCREEN)
+class Enemy(Trigger):
+	"""a trigger with the ability to move around and do cool stuff"""
+	def __init__(self, *args, **kwargs):
+		"""brain should be function in addition to trigger function to get called each turn"""
+		Trigger.__init__(self, *args, **kwargs)
+		self.brain = kwargs["brain_function"]
+		self.x_vel, self.y_vel = 0, 0
+		self.direction = 1
+
+	def advance(self, game):
+		Trigger.advance(self, game)
+		self.brain(self, game) #hit detection will have to go in here
+		self.x += self.x_vel
+		self.y += self.y_vel
+
+	def draw(self, destination):
+		GamePiece.draw(self, destination)
 
 if __name__ == "__main__":
 	# TEST ROOM :)
+	SCOREKEEP = pygame.font.SysFont("helvetica", 40)
+	beerpile = [(100, 440), (300, 440), (500, 440), (300, 280)]
+	def advance_frame(gameboard, CLOCK, SCREEN):
+		CLOCK.tick(30)
+		if DEBUG: os.system("clear||cls")
+		if not gameboard["collectables"]: 
+			gameboard["collectables"] = [GamePiece(x, y, 20, 20, name="beer", tangible=False, color=(210, 180, 200)) for (x, y) in beerpile]
+		for peice in gameboard["platforms"] + [gameboard["player"]] + gameboard["triggers"] + gameboard["collectables"]:
+			peice.advance(gameboard)
+			peice.draw(SCREEN)
+		SCREEN.blit(SCOREKEEP.render("Beers drank: "+str(len(gameboard["player"].collectables)), 0, (0, 0, 0)), (50, 50))
+
 
 	SCREEN = pygame.display.set_mode((640, 480))
 	PLAYER = {
@@ -179,33 +215,48 @@ if __name__ == "__main__":
 		"jump_vel": -15,
 		"jumps": 2,
 		"dash": True,
-		"dash_speed": 20,
-		"dash_frames": 15,
+		"dash_speed": 14,
+		"dash_frames": 25,
 		"walk_speed": 8,
 		"speed": 1,
-		"friction": 3,
-		"tangible": False
+		"friction": 1,
 	}
-	wall = GamePiece(200, 320, 20, 140, name="door", tangible=True, color=(250, 150, 200))
-	def door(self, game, wall=wall):
-		if not hasattr(self, "wall"):
-			self.wall = wall
+
+	def walker(self, game):
+		self.direction = -1 if self.x > game["player"].x else 1
+		self.x_vel = self.speed * self.direction
+	def kill(self, game):
+		game["player"] = Player(50, 50, 30, 40, **PLAYER)
+		self.triggered = False
+	COP = {
+		"name": "granny",
+		"color": (250, 55, 55),
+		"direction": 1,
+		"speed": 3,
+		"trigger_function": kill,
+		"brain_function": walker
+	}	
+
+
+	wall = GamePiece(200, 320, 20, 140, name="door", tangible=True, color=(180, 150, 120))
+	def door(self, game):
 		order = [(200, 320),(200, 180),(420, 180),(420, 320)]
 		self.x, self.y = wall.x, wall.y
-		wall.x, wall.y = order[(order.index((wall.x, wall.y)) + 1) % 4]
+		self.wall.x, self.wall.y = order[(order.index((wall.x, wall.y)) + 1) % 4]
 		self.triggered = False
 
 	TRIGGER = {
-		"function": door,
+		"trigger_function": door,
 		"name": "doortrigger",
-		"tangible": False,
-		"color": (20, 150, 50)
+		"color": (20, 150, 50),
+		"wall": wall
 	}
 	gameboard = {
 		"player": Player(50, 50, 30, 40, **PLAYER),
-		"platforms": [wall] + [GamePiece(x, y, w, h, name="platform", tangible=True, color=(150, 150, 100))
+		"platforms": [wall] + [GamePiece(x, y, w, h, name="platform", color=(150, 150, 100))
 		for x, y, w, h in [(0, 460, 640, 20), (620, 0, 20, 460), (0, 0, 20, 460), (200, 300, 240, 20)]],
-		"triggers": [Trigger(420, 320, 20, 140, **TRIGGER)]
+		"triggers": [Trigger(420, 320, 20, 140, **TRIGGER), Enemy(600, 420, 30, 40, **COP)],
+		"collectables": [GamePiece(x, y, 20, 20, name="beer", color=(210, 180, 200)) for (x, y) in beerpile]
 	}
 	while True:
 		SCREEN.fill((255, 255, 255))
