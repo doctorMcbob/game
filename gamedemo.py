@@ -15,7 +15,8 @@ CLOCK = pygame.time.Clock()
 SCOREKEEP = pygame.font.SysFont("helvetica", 40)
 
 # PLAYER FUNCTIONS
-# not yet implemented
+def dash(self, game):
+	self.x_vel = 40 # make better later
 
 # TRIGGER FUNCTIONS
 def kill(self, game):
@@ -24,8 +25,8 @@ def kill(self, game):
 
 def door_trigger(self, game):
 	order = [(200, 320),(200, 180),(420, 180),(420, 320)]
-	self.x, self.y = wall.x, wall.y
-	self.wall.x, self.wall.y = order[(order.index((wall.x, wall.y)) + 1) % 4]
+	self.x, self.y = self.wall.x, self.wall.y
+	self.wall.x, self.wall.y = order[(order.index((self.wall.x, self.wall.y)) + 1) % 4]
 	self.triggered = False
 
 # ENEMY FUNCTIONS
@@ -40,9 +41,7 @@ PLAYER = {
 	"grav": 1,
 	"jump_vel": -15,
 	"jumps": 2,
-	"dash": True,
-	"dash_speed": 14,
-	"dash_frames": 25,
+	"action_function": dash,
 	"walk_speed": 8,
 	"speed": 1,
 	"friction": 1,
@@ -65,17 +64,15 @@ TRIGGER = {
 }
 
 # ASSEMLE GAME BOARD
+beerpile = [(100, 440), (300, 440), (500, 440), (300, 280)]
 gameboard = {
 	"player": Player(50, 50, 30, 40, **PLAYER),
-	"platforms": [wall] + [GamePiece(x, y, w, h, name="platform", color=(150, 150, 100))
+	"platforms": [TRIGGER["wall"]] + [GamePiece(x, y, w, h, name="platform", color=(150, 150, 100))
 	for x, y, w, h in [(0, 460, 640, 20), (620, 0, 20, 460), (0, 0, 20, 460), (200, 300, 240, 20)]],
 	"triggers": [Trigger(420, 320, 20, 140, **TRIGGER), Enemy(600, 420, 30, 40, **COP)],
 	"collectables": [GamePiece(x, y, 20, 20, name="beer", color=(210, 180, 200)) for (x, y) in beerpile]
 }
 
-
-
-beerpile = [(100, 440), (300, 440), (500, 440), (300, 280)]
 def advance_frame(gameboard, CLOCK, SCREEN):
 	CLOCK.tick(30)
 	if DEBUG: os.system("clear||cls")

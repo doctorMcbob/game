@@ -3,7 +3,7 @@
 # x triggers
 # x create enemies (walking triggers)
 # x create collectables
-# . rewrite player advance (include function abstraction in place of dash)
+# x rewrite player advance (include function abstraction in place of dash)
 # . implement buzz meter
 # . decide on final specs (game screen size, player size, final controls)
 # . animation in place of draw
@@ -42,6 +42,9 @@ class GamePiece(pygame.rect.Rect):
 
 
 class Player(GamePiece):
+	"""a bulk of the code right now
+	render_input exausts pygame event queue
+	expects action_function for dash, teleporter, whatever you want"""
 	def __init__(self, *args, **kwargs):
 		GamePiece.__init__(self, *args, **kwargs)
 		self.x_vel = 0
@@ -51,10 +54,8 @@ class Player(GamePiece):
 		self.grav = kwargs["grav"]
 		self.jump_vel = kwargs["jump_vel"]
 		self.jumps = kwargs["jumps"]
-		self.dash = kwargs["dash"]
-		self.dash_speed = kwargs["dash_speed"]
-		self.dash_frames = kwargs["dash_frames"]
-		self.dash_counter = 0
+
+		self.action_function = kwargs["action_function"]
 		self.walk_speed = kwargs["walk_speed"]
 		self.speed = kwargs["speed"]
 		self.friction = kwargs["friction"]
@@ -64,25 +65,25 @@ class Player(GamePiece):
 			"left": K_LEFT,
 			"right": K_RIGHT,
 			"jump": K_z,
-			"dash": K_x
+			"action": K_x
 		}
 		self.collectables = []
 
 	def _set_buttons(self, buttons):
 		self.buttons = buttons
 
-	def render_input(self):
+	def render_input(self, game):
 		for event in pygame.event.get():
 			if event.type == QUIT: quit() 
 			if (event.type == KEYDOWN):
 				if event.key == self.buttons['jump'] and self.jumps > 0:
 					self.jumps -= 1
 					self.y_vel = self.jump_vel
-				if event.key == self.buttons['dash'] and self.dash:
-					self.x_vel = self.dash_speed * self.direction
-					self.dash = False
+				if event.key == self.buttons['action']:
+					self.action_function(self, game)
+
 		self.keys = pygame.key.get_pressed()
-		if self.dash_counter == 0 and self.keys[self.buttons['left']] != self.keys[self.buttons['right']]:
+		if self.keys[self.buttons['left']] != self.keys[self.buttons['right']]:
 				self.direction = -1 if self.keys[self.buttons['left']] else 1
 		self.x_vel = max(
 			min(abs(self.x_vel) + (self.speed * (self.keys[self.buttons['right']] or self.keys[self.buttons['left']])), self.walk_speed),
@@ -92,7 +93,7 @@ class Player(GamePiece):
 
 	def advance(self, game):
 		if DEBUG: GamePiece._debug(self)
-		self.render_input()
+		self.render_input(game)
 		platforms = game["platforms"]
 		collectables = game["collectables"]
 		# Y update and hit detection
@@ -100,27 +101,17 @@ class Player(GamePiece):
 
 		i = self.move(0, self.y_vel).collidelist([plat for plat in platforms])
 		if i != -1:			
+			# regain jumps
 			if self.y_vel > 0: 
 				self.jumps = 2
 				# velocity correction
 				while self.y_vel and platforms[i].colliderect(pygame.rect.Rect(
 					(self.left, self.bottom), (self.w, self.y_vel) )  ):
 					self.y_vel -= 1
-					if DEBUG: print("y velocity correction", self.y_vel)
 			else: self.y_vel = 0
-			if abs(self.x_vel) and self.dash:
-				if (self.keys[self.buttons['right']] or self.keys[self.buttons['left']]):
-					self.x_vel = max(abs(self.x_vel) - self.friction, self.walk_speed
-						) * self.direction
-				else:
-					self.x_vel = max(abs(self.x_vel) - self.friction, 0
-						) * self.direction
 
+			
 		# X update and hit detection
-		if self.dash_counter:
-			if self.dash_counter == self.dash_frames:
-				self.dash_counter = 0
-
 		i = self.move(self.x_vel, 0).collidelist([plat for plat in platforms])
 		if i != -1:
 			while platforms[i].colliderect(pygame.rect.Rect(
@@ -129,18 +120,11 @@ class Player(GamePiece):
 							((self.right, self.top), (abs(self.x_vel), self.h)) 
 						][self.direction + 1])  ):
 					self.x_vel -= self.direction
-					if DEBUG: print("x velocity correction", self.x_vel)
 
 		#cornerbug fix
 		if self.move(self.x_vel, self.y_vel).collidelist(
 			[plat for plat in platforms]) != -1:
 			self.x_vel, self.y_vel = 0, 0
-
-		if self.dash_counter == 0: self.dash = True
-		else: 
-			self.y_vel = 0
-			self.x_vel = self.dash_speed
-
 
 		self.move_ip(self.x_vel, self.y_vel)
 
@@ -184,8 +168,7 @@ class Enemy(Trigger):
 	def advance(self, game):
 		Trigger.advance(self, game)
 		self.brain(self, game) #hit detection will have to go in here
-		self.x += self.x_vel
-		self.y += self.y_vel
+		self.move_ip(self.x_vel, self.y_vel)
 
 	def draw(self, destination):
 		GamePiece.draw(self, destination)
