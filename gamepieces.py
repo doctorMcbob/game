@@ -110,6 +110,9 @@ class Player(GamePiece):
 					self.y_vel -= 1
 			else: self.y_vel = 0
 
+			if self.x_vel and self.keys[self.buttons["left"]] == self.keys[self.buttons["right"]]:
+				self.x_vel = (abs(self.x_vel) - self.friction) * self.direction
+
 			
 		# X update and hit detection
 		i = self.move(self.x_vel, 0).collidelist([plat for plat in platforms])
