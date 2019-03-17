@@ -84,11 +84,11 @@ class Player(GamePiece):
 
 		self.keys = pygame.key.get_pressed()
 		if self.keys[self.buttons['left']] != self.keys[self.buttons['right']]:
-				self.direction = -1 if self.keys[self.buttons['left']] else 1
-		self.x_vel = max(
-			min(abs(self.x_vel) + (self.speed * (self.keys[self.buttons['right']] or self.keys[self.buttons['left']])), self.walk_speed),
-			abs(self.x_vel)
-		) * self.direction
+			self.direction = -1 if self.keys[self.buttons['left']] else 1
+			self.x_vel = max(
+				min(abs(self.x_vel) + (self.speed * (self.keys[self.buttons['right']] or self.keys[self.buttons['left']])), self.walk_speed),
+				abs(self.x_vel)
+			) * self.direction
 
 
 	def advance(self, game):
