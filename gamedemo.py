@@ -39,7 +39,7 @@ PLAYER = {
 	"y vel": 0,
 	"direction": 1,
 
-	"rect": pygame.rect.Rect(50, 50, 30, 40),
+	"rect": pygame.rect.Rect(350, 150, 30, 40),
 	"buttons": {
 		"left": K_LEFT,
 		"right": K_RIGHT,
@@ -48,11 +48,27 @@ PLAYER = {
 	}
 }
 
+WALL = makeplatform((500, 420, 20, 140))
+def door_trigger_function(this, game):
+	rect, wall = this['rect'], this['wall']['rect']
+	order = [(500, 420),(500, 280),(720, 280),(720, 420)]
+	rect.x, rect.y = wall.x, wall.y
+	wall.x, wall.y = order[(order.index((wall.x, wall.y)) + 1) % 4]
+
+DOOR_TRIGGER = {
+	"name": 'door trigger',
+	"trigger function": door_trigger_function,
+	"rect": pygame.rect.Rect(720, 420, 20, 140),
+	"color": (20, 150, 50),
+	"wall": WALL,
+	'invisable': True,
+}
+
 GAMEBOARD = {
 	'player': PLAYER,
-	'platforms': [makeplatform(rect) for rect in [
-	(0, 460, 640, 20), (620, 0, 20, 460), (0, 0, 20, 460), (200, 300, 240, 20)]],
-	'triggers': []
+	'platforms': [WALL] + [makeplatform(rect) for rect in [
+	(300, 560, 640, 20), (920, 100, 20, 460), (300, 100, 20, 460), (500, 400, 240, 20)]],
+	'triggers': [DOOR_TRIGGER]
 }
 
 def advance_frame(GAMEBOARD, SCREEN):
@@ -65,8 +81,7 @@ def advance_frame(GAMEBOARD, SCREEN):
 		gp.move_and_collision(actor, GAMEBOARD["platforms"])
 		gp.trigger(actor, GAMEBOARD["player"], GAMEBOARD)
 		if "advance_function" in actor: actor["advance_function"](actor, GAMEBOARD)
-		gp.draw(actor, SCREEN)
-	
+		if not ('invisable' in actor and actor['invisable']): gp.draw(actor, SCREEN)
 
 while True:
 	SCREEN.fill((255, 255, 255))

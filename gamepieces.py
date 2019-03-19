@@ -78,6 +78,6 @@ def  move_and_collision(this, checklist):
 	rect.move_ip(this['x vel'], this['y vel'])
 
 def trigger(this, check, game):
-	if not ('rect' in this and 'trigger_function' in this):
+	if not ('rect' in this and 'trigger function' in this):
 		return
-	if this['rect'].colliderect(check): this['trigger_function'](game)
+	if this['rect'].colliderect(check['rect']): this['trigger function'](this, game)
