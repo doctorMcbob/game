@@ -51,9 +51,8 @@ PLAYER = {
 WALL = makeplatform((500, 420, 20, 140))
 def door_trigger_function(this, game):
 	rect, wall = this['rect'], this['wall']['rect']
-	order = [(500, 420),(500, 280),(720, 280),(720, 420)]
 	rect.x, rect.y = wall.x, wall.y
-	wall.x, wall.y = order[(order.index((wall.x, wall.y)) + 1) % 4]
+	wall.x, wall.y = this['order'][(this['order'].index((wall.x, wall.y)) + 1) % 4]
 
 DOOR_TRIGGER = {
 	"name": 'door trigger',
@@ -61,14 +60,36 @@ DOOR_TRIGGER = {
 	"rect": pygame.rect.Rect(720, 420, 20, 140),
 	"color": (20, 150, 50),
 	"wall": WALL,
-	'invisable': True,
+	"invisable": False if DEBUG else True,
+	"order": [(500, 420),(500, 280),(720, 280),(720, 420)],
+}
+PLATFORMS = [makeplatform((1110, 560, 150, 20)), makeplatform((940, 400, 150, 20)), makeplatform((1110, 240, 150, 20))]
+def platform_trigger_function(this, game):
+	rect = this['rect']
+	i = this['order'].index((rect.x, rect.y))
+	game['platforms'].append(this['platforms'][(i + 1) % 3])
+	rect.x, rect.y = this['order'][(i + 1) % 3]
+	if this['platforms'][(i - 1) % 3] in game['platforms']:
+		game['platforms'].remove(this['platforms'][(i - 1) % 3])
+	 
+
+PLATFORM_TRIGGER = {
+	"name": 'platform trigger',
+	"trigger function": platform_trigger_function,
+	"rect": pygame.rect.Rect(1110, 460, 20, 100),
+	"platforms": PLATFORMS,
+	"color": (20, 150, 50),
+	"invisable": False if DEBUG else True,
+	"order": [(1110, 460), (1070, 300), (1110, 140)],
 }
 
 GAMEBOARD = {
 	'player': PLAYER,
-	'platforms': [WALL] + [makeplatform(rect) for rect in [
-	(300, 560, 640, 20), (920, 100, 20, 460), (300, 100, 20, 460), (500, 400, 240, 20)]],
-	'triggers': [DOOR_TRIGGER]
+	'platforms': [PLATFORMS[0]] + [WALL] + [makeplatform(rect) for rect in [
+	(300, 560, 640, 20), (920, 100, 20, 460), (300, 100, 20, 460), (500, 400, 240, 20),
+	(0, 0, 20, 680), (0, 680, 1280, 20), (1260, 0, 20, 680), (0, 0, 1280, 20),
+	]],
+	'triggers': [DOOR_TRIGGER, PLATFORM_TRIGGER]
 }
 
 def advance_frame(GAMEBOARD, SCREEN):
