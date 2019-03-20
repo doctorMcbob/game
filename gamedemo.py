@@ -36,6 +36,39 @@ def player_jump(this, game):
 	if this['state'] == "stand":
 		this['jumps'] = 2
 
+def door_trigger_function(this, game):
+	rect, wall = this['rect'], this['wall']['rect']
+	rect.x, rect.y = wall.x, wall.y
+	wall.x, wall.y = this['order'][(this['order'].index((wall.x, wall.y)) + 1) % 4]
+
+def platform_trigger_function(this, game):
+	rect = this['rect']
+	i = this['order'].index((rect.x, rect.y))
+	game['platforms'].append(this['platforms'][(i + 1) % 3])
+	rect.x, rect.y = this['order'][(i + 1) % 3]
+	if this['platforms'][(i - 1) % 3] in game['platforms']:
+		game['platforms'].remove(this['platforms'][(i - 1) % 3])
+	 
+def reset_platforms(this, game):
+	for plat in this['platforms']:
+		if plat in GAMEBOARD['platforms']:
+			GAMEBOARD['platforms'].remove(plat)
+	this['friend']['rect'] = pygame.rect.Rect(1110, 460, 20, 100)
+	GAMEBOARD['platforms'].append(this['platforms'][0])
+
+def kill(this, game):
+	game["player"]['rect'] = pygame.rect.Rect(350, 150, 30, 40)
+	game["player"]["collectables"] = []
+
+def granny_about(this, game):
+	this['direction'] = 1 if this['rect'].x < game['player']['rect'].x else -1
+	this['x vel'] = 1 * this['direction']
+
+def turn_around(this, game):
+	if this['x vel'] == 0:
+		this['direction'] = [None, -1, 1][this['direction']]
+	this['x vel'] = 8 * this['direction']
+
 PLAYER = {
 	"name": "player",
 	"color": (100, 50, 100),
@@ -63,11 +96,6 @@ PLAYER = {
 }
 
 WALL = makeplatform((500, 420, 20, 140))
-def door_trigger_function(this, game):
-	rect, wall = this['rect'], this['wall']['rect']
-	rect.x, rect.y = wall.x, wall.y
-	wall.x, wall.y = this['order'][(this['order'].index((wall.x, wall.y)) + 1) % 4]
-
 DOOR_TRIGGER = {
 	"name": 'door trigger',
 	"trigger function": door_trigger_function,
@@ -79,14 +107,6 @@ DOOR_TRIGGER = {
 }
 
 PLATFORMS = [makeplatform((1110, 560, 150, 20)), makeplatform((940, 400, 150, 20)), makeplatform((1110, 240, 150, 20))]
-def platform_trigger_function(this, game):
-	rect = this['rect']
-	i = this['order'].index((rect.x, rect.y))
-	game['platforms'].append(this['platforms'][(i + 1) % 3])
-	rect.x, rect.y = this['order'][(i + 1) % 3]
-	if this['platforms'][(i - 1) % 3] in game['platforms']:
-		game['platforms'].remove(this['platforms'][(i - 1) % 3])
-	 
 PLATFORM_TRIGGER = {
 	"name": 'platform trigger',
 	"trigger function": platform_trigger_function,
@@ -97,13 +117,6 @@ PLATFORM_TRIGGER = {
 	"order": [(1110, 460), (1070, 300), (1110, 140)],
 }
 
-def reset_platforms(this, game):
-	for plat in this['platforms']:
-		if plat in GAMEBOARD['platforms']:
-			GAMEBOARD['platforms'].remove(plat)
-	this['friend']['rect'] = pygame.rect.Rect(1110, 460, 20, 100)
-	GAMEBOARD['platforms'].append(this['platforms'][0])
-
 RESET_TRIGGER = {
 	"name": "platform reset trigger",
 	"trigger function": reset_platforms,
@@ -113,12 +126,6 @@ RESET_TRIGGER = {
 	"friend": PLATFORM_TRIGGER,
 	"platforms": PLATFORMS,
 }
-def kill(this, game):
-	game["player"]['rect'] = pygame.rect.Rect(350, 150, 30, 40)
-	game["player"]["collectables"] = []
-def granny_about(this, game):
-	this['direction'] = 1 if this['rect'].x < game['player']['rect'].x else -1
-	this['x vel'] = 1 * this['direction']
 
 GRANNY = {
 	"name": "granny",
@@ -130,11 +137,6 @@ GRANNY = {
 	"y vel": 0,
 	"direction": -1
 }
-
-def turn_around(this, game):
-	if this['x vel'] == 0:
-		this['direction'] = [None, -1, 1][this['direction']]
-	this['x vel'] = 8 * this['direction']
 
 DOG = {
 	"name": "dog",
