@@ -43,16 +43,16 @@ def  move_and_collision(this, checklist):
 	
 	# -- Y -- 
 	if 'grav' in this: this['y vel'] += this['grav']
-	i = rect.move(0, this['y vel']).collidelist(checklist)
-	if i != -1:
+	yi = rect.move(0, this['y vel']).collidelist(checklist)
+	if yi != -1:
 		if this['y vel'] > 0:
 			if 'state' in this: this['state'] = "stand"
 			# velocity correction
-			while checklist[i].colliderect(pygame.rect.Rect(
+			while checklist[yi].colliderect(pygame.rect.Rect(
 						rect.left, rect.bottom, rect.w, this['y vel']
 					)): this['y vel'] -= 1
 		else: 
-			while checklist[i].colliderect(pygame.rect.Rect(
+			while checklist[yi].colliderect(pygame.rect.Rect(
 						rect.left, rect.top + this['y vel'], rect.w, this['y vel']
 					)): this['y vel'] += 1
 
@@ -61,10 +61,10 @@ def  move_and_collision(this, checklist):
 	if 'state' in this and this['y vel']: this['state'] = 'fall'
 	
 	# -- X -- 
-	i = rect.move(this['x vel'], 0).collidelist(checklist)
-	if i != -1:
+	xi = rect.move(this['x vel'], 0).collidelist(checklist)
+	if xi != -1:
 		# velocity correction
-		while checklist[i].colliderect(pygame.rect.Rect(
+		while checklist[xi].colliderect(pygame.rect.Rect(
 					*[
 							((rect.left + this["x vel"], rect.top), (abs(this['x vel']), rect.h)), "sneaky",
 							((rect.right, rect.top), (abs(this["x vel"]), rect.h)) 
