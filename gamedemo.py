@@ -4,7 +4,7 @@ from pygame.locals import *
 import os, sys
 DEBUG = True if 'debug' in sys.argv else False
 
-import gamepieces as gp
+import gameassets as ga
 
 pygame.init()
 
@@ -166,18 +166,18 @@ GAMEBOARD = {
 
 SCOREFONT = pygame.font.SysFont("helvetica", 50)
 def advance_frame(GAMEBOARD, SCREEN):
-	keys = gp.render_input(GAMEBOARD)
+	keys = ga.render_input(GAMEBOARD)
 	CLOCK.tick(30)
 	if DEBUG:
 		os.system("clear||cls")
 		print(GAMEBOARD["player"])
 	for actor in GAMEBOARD["triggers"] + GAMEBOARD["platforms"] + [GAMEBOARD["player"] ]+ GAMEBOARD['collectables']:
-		gp.move_and_collision(actor, GAMEBOARD["platforms"], SCREEN)
-		gp.trigger(actor, GAMEBOARD["player"], GAMEBOARD)
+		ga.move_and_collision(actor, GAMEBOARD["platforms"], SCREEN)
+		ga.trigger(actor, GAMEBOARD["player"], GAMEBOARD)
 		if "advance function" in actor: actor["advance function"](actor, GAMEBOARD)
-		if not ('invisable' in actor and actor['invisable']): gp.draw(actor, SCREEN)
+		if not ('invisable' in actor and actor['invisable']): ga.draw(actor, SCREEN)
 	if not GAMEBOARD['collectables']: GAMEBOARD['collectables'] = [makecollectable((xy, (20, 20)), "beer", 10) for xy in beerpile]
-	gp.bar(GAMEBOARD['player'], SCREEN)
+	ga.bar(GAMEBOARD['player'], SCREEN)
 	
 while True:
 	SCREEN.fill((255, 255, 255))
