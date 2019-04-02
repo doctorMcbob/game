@@ -6,11 +6,11 @@ from pygame.locals import *
 pygame.init()
 
 FONT = pygame.font.SysFont("helvetica", 10)
-def draw(this, destination):
+def draw(this, destination, modifier=(0,0)):
 	pygame.draw.rect(destination, this['color'], this['rect'])
-	destination.blit(FONT.render(this['name'], 0, (0,0,0)), (this['rect'].x, this['rect'].y))
+	destination.blit(FONT.render(this['name'], 0, (0,0,0)), (this['rect'].x + modifier[0], this['rect'].y + modifier[1]))
 	if 'state' in this:
-		destination.blit(FONT.render(this['state'], 0, (0,0,0)), (this['rect'].x, this['rect'].y + 10))
+		destination.blit(FONT.render(this['state'], 0, (0,0,0)), (this['rect'].x + modifier[0], this['rect'].y + 10 + modifier[1]))
 
 def bar(player, SCREEN, MAX=1000):
 	pygame.draw.rect(SCREEN, (0, 0, 0), pygame.rect.Rect(0, 0, 1280, 30))
@@ -111,3 +111,31 @@ def trigger(this, check, game):
 	if not ('rect' in this and 'trigger function' in this):
 		return
 	if this['rect'].colliderect(check['rect']): this['trigger function'](this, game)
+
+def makeplatform(rect):
+	return {
+		"name": "platform",
+		"color": (150, 150, 100),
+		"rect": pygame.rect.Rect(rect)
+	}
+
+def collectable_get(this, game):
+	game["player"]['collectables'].append(this)
+	game["collectables"].remove(this)
+
+def makecollectable(rect, name, value):
+	return {
+		"name": name,
+		"color": (210, 180, 200),
+		"rect": pygame.rect.Rect(rect),
+		"trigger function": collectable_get,
+		"value":value,
+	}
+
+def player_jump(this, game):
+	if this['state'] == "stand":
+		this['jumps'] = 2
+
+def kill(this, game):
+	game["player"]['rect'] = pygame.rect.Rect(350, 150, 30, 40)
+	game["player"]["collectables"] = []
