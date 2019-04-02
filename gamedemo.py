@@ -1,4 +1,3 @@
-#rewrite
 from __future__ import print_function, unicode_literals
 import pygame
 from pygame.locals import *
@@ -24,12 +23,13 @@ def collectable_get(this, game):
 	game["player"]['collectables'].append(this)
 	game["collectables"].remove(this)
 
-def makecollectable(rect, name):
+def makecollectable(rect, name, value):
 	return {
 		"name": name,
 		"color": (210, 180, 200),
 		"rect": pygame.rect.Rect(rect),
 		"trigger function": collectable_get,
+		"value":value,
 	}
 
 def player_jump(this, game):
@@ -40,6 +40,7 @@ def door_trigger_function(this, game):
 	rect, wall = this['rect'], this['wall']['rect']
 	rect.x, rect.y = wall.x, wall.y
 	wall.x, wall.y = this['order'][(this['order'].index((wall.x, wall.y)) + 1) % 4]
+	
 
 def platform_trigger_function(this, game):
 	rect = this['rect']
@@ -122,7 +123,7 @@ RESET_TRIGGER = {
 	"trigger function": reset_platforms,
 	"rect": pygame.rect.Rect(920, 580, 20, 100),
 	"color": (20, 150, 50),
-	"invisable": True,
+	"invisable": False if DEBUG else True,
 	"friend": PLATFORM_TRIGGER,
 	"platforms": PLATFORMS,
 }
@@ -160,7 +161,7 @@ GAMEBOARD = {
 	(0, 0, 20, 680), (0, 680, 1280, 20), (1260, 0, 20, 680), (0, 0, 1280, 20),
 	]],
 	'triggers': [DOOR_TRIGGER, PLATFORM_TRIGGER, RESET_TRIGGER, GRANNY, DOG],
-	'collectables': [makecollectable((xy, (20, 20)), "beer") for xy in beerpile]
+	'collectables': [makecollectable((xy, (20, 20)), "beer", 10) for xy in beerpile]
 }
 
 SCOREFONT = pygame.font.SysFont("helvetica", 50)
@@ -171,13 +172,13 @@ def advance_frame(GAMEBOARD, SCREEN):
 		os.system("clear||cls")
 		print(GAMEBOARD["player"])
 	for actor in GAMEBOARD["triggers"] + GAMEBOARD["platforms"] + [GAMEBOARD["player"] ]+ GAMEBOARD['collectables']:
-		gp.move_and_collision(actor, GAMEBOARD["platforms"])
+		gp.move_and_collision(actor, GAMEBOARD["platforms"], SCREEN)
 		gp.trigger(actor, GAMEBOARD["player"], GAMEBOARD)
 		if "advance function" in actor: actor["advance function"](actor, GAMEBOARD)
 		if not ('invisable' in actor and actor['invisable']): gp.draw(actor, SCREEN)
-	if not GAMEBOARD['collectables']: GAMEBOARD['collectables'] = [makecollectable((xy, (20, 20)), "beer") for xy in beerpile]
-	SCREEN.blit(SCOREFONT.render("BEERS CONSUMED: " + str(len(GAMEBOARD['player']['collectables'])), 0, (0, 0, 0)), (340, 200))
-
+	if not GAMEBOARD['collectables']: GAMEBOARD['collectables'] = [makecollectable((xy, (20, 20)), "beer", 10) for xy in beerpile]
+	gp.bar(GAMEBOARD['player'], SCREEN)
+	
 while True:
 	SCREEN.fill((255, 255, 255))
 	advance_frame(GAMEBOARD, SCREEN)
