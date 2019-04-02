@@ -5,18 +5,31 @@ from pygame.locals import *
 
 pygame.init()
 
+
+def SCROLLER(SCREEN, focus, actors):
+	surf = pygame.Surface(SCREEN.get_size())
+	surf.fill((255, 255, 255))
+	xmod, ymod = 0 - focus['rect'].x + ((surf.get_width()/2) - focus['rect'].w/2), 0 - focus['rect'].y + ((surf.get_height()/2) - focus['rect'].h/2)
+	for actor in actors:
+		draw(actor, surf, modifier=(xmod, ymod))
+	draw(focus, surf, modifier=(xmod, ymod))
+	return surf
+
 FONT = pygame.font.SysFont("helvetica", 10)
 def draw(this, destination, modifier=(0,0)):
-	pygame.draw.rect(destination, this['color'], this['rect'])
+	if 'invisable' in this and this['invisable']:
+		return
+	rect = pygame.rect.Rect((this['rect'].x + modifier[0], this['rect'].y + modifier[1]), (this['rect'].w, this['rect'].h))
+	pygame.draw.rect(destination, this['color'], rect)
 	destination.blit(FONT.render(this['name'], 0, (0,0,0)), (this['rect'].x + modifier[0], this['rect'].y + modifier[1]))
 	if 'state' in this:
 		destination.blit(FONT.render(this['state'], 0, (0,0,0)), (this['rect'].x + modifier[0], this['rect'].y + 10 + modifier[1]))
 
 def bar(player, SCREEN, MAX=1000):
-	pygame.draw.rect(SCREEN, (0, 0, 0), pygame.rect.Rect(0, 0, 1280, 30))
-	pygame.draw.rect(SCREEN, (255, 255, 255), pygame.rect.Rect(5, 5, 1270, 20))
+	pygame.draw.rect(SCREEN, (0, 0, 0), pygame.rect.Rect(0, 0, SCREEN.get_width(), 30))
+	pygame.draw.rect(SCREEN, (255, 255, 255), pygame.rect.Rect(5, 5, SCREEN.get_width()-10, 20))
 	progress = sum([col['value'] for col in player['collectables']])
-	pygame.draw.rect(SCREEN, (255, 0, 0), pygame.rect.Rect(5, 5, int((progress / float(MAX)) * 1270), 20))
+	pygame.draw.rect(SCREEN, (255, 0, 0), pygame.rect.Rect(5, 5, max(int((progress / float(MAX)) * SCREEN.get_width()-10), 0), 20))
 	return True if progress / float(MAX) >= 1 else False
 
 def render_input(game):
@@ -42,7 +55,7 @@ def render_input(game):
 				player['x vel'] = player['walk speed'] * player['direction']
 	return keys
 
-def  move_and_collision(this, checklist, screen):
+def  move_and_collision(this, checklist):
 	if not ('rect' in this and 'x vel' in this and 'y vel' in this and 'direction' in this):
 		return
 	checklist = [actor['rect'] for actor in checklist]

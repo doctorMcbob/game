@@ -8,7 +8,7 @@ import gameassets as ga
 
 pygame.init()
 
-SCREEN = pygame.display.set_mode((1280, 700))
+SCREEN = pygame.display.set_mode((640, 480))
 pygame.display.set_caption("Alcoholism: The Game")
 CLOCK = pygame.time.Clock()
 
@@ -137,7 +137,6 @@ GAMEBOARD = {
 	'collectables': [ga.makecollectable((xy, (20, 20)), "beer", 10) for xy in beerpile]
 }
 
-SCOREFONT = pygame.font.SysFont("helvetica", 50)
 def advance_frame(GAMEBOARD, SCREEN):
 	keys = ga.render_input(GAMEBOARD)
 	CLOCK.tick(30)
@@ -145,10 +144,10 @@ def advance_frame(GAMEBOARD, SCREEN):
 		os.system("clear||cls")
 		print(GAMEBOARD["player"])
 	for actor in GAMEBOARD["triggers"] + GAMEBOARD["platforms"] + [GAMEBOARD["player"] ]+ GAMEBOARD['collectables']:
-		ga.move_and_collision(actor, GAMEBOARD["platforms"], SCREEN)
+		ga.move_and_collision(actor, GAMEBOARD["platforms"])
 		ga.trigger(actor, GAMEBOARD["player"], GAMEBOARD)
 		if "advance function" in actor: actor["advance function"](actor, GAMEBOARD)
-		if not ('invisable' in actor and actor['invisable']): ga.draw(actor, SCREEN)
+	SCREEN.blit(ga.SCROLLER(SCREEN, GAMEBOARD["player"], GAMEBOARD["triggers"] + GAMEBOARD["platforms"] + GAMEBOARD['collectables']), (0, 0))
 	if not GAMEBOARD['collectables']: GAMEBOARD['collectables'] = [ga.makecollectable((xy, (20, 20)), "beer", 10) for xy in beerpile]
 	ga.bar(GAMEBOARD['player'], SCREEN)
 	
